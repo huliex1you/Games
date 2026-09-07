@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>تحدي الكلمات - النسخة الخليجية</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & Babel -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans Arabic', sans-serif;
+            background-color: #f4ebe1;
+            margin: 0; padding: 0;
+            user-select: none;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Loading Screen Styles */
+        #loading-screen {
+            position: fixed; inset: 0; background: #f4ebe1; z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .spinner { width: 50px; height: 50px; border: 5px solid #fdfbf7; border-top-color: #e57283; border-radius: 50%; animation: spin 1s linear infinite; mb-4; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Claymorphism UI Effects */
+        .clay-main {
+            background: #e57283; border-radius: 2.5rem;
+            box-shadow: 0 15px 35px -10px rgba(229,114,131,0.5), inset 0 6px 12px rgba(255,255,255,0.4), inset 0 -6px 12px rgba(0,0,0,0.1);
+        }
+        .clay-panel {
+            background: #fdfbf7; border-radius: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06), inset 0 4px 10px #ffffff;
+        }
+        .clay-btn-white {
+            background: #fdfbf7; border-radius: 999px;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1), inset 0 4px 6px #ffffff;
+            color: #e57283; transition: all 0.2s ease; cursor: pointer; border: none; font-weight: 900;
+        }
+        .clay-btn-white:active { transform: translateY(3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .clay-input { background: #f4ebe1; box-shadow: inset 0 3px 6px rgba(0,0,0,0.06); border: none; }
+        
+        /* 3D Theme Variants */
+        .clay-blue { background: #9fcbf6; box-shadow: 0 10px 20px rgba(159,203,246,0.3), inset 0 4px 8px #ffffff80; }
+        .clay-pink { background: #f4a3b4; box-shadow: 0 10px 20px rgba(244,163,180,0.3), inset 0 4px 8px #ffffff80; }
+        .clay-green { background: #a3d8ab; box-shadow: 0 10px 20px rgba(163,216,171,0.3), inset 0 4px 8px #ffffff80; }
+        .clay-purple { background: #c8bbf4; box-shadow: 0 10px 20px rgba(200,187,244,0.3), inset 0 4px 8px #ffffff80; }
+
+        .text-3d { color: #fff; text-shadow: 1px 2px 3px rgba(0,0,0,0.2); }
+
+        /* Animations */
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+        .anim-float { animation: float 4s ease-in-out infinite; }
+        @keyframes arrows-scroll { 0% { transform: translateX(50%); } 100% { transform: translateX(-50%); } }
+        .animate-arrows { animation: arrows-scroll 10s linear infinite; }
+        
+        select { appearance: none; -webkit-appearance: none; }
+    </style>
+</head>
+<body>
+    <!-- شاشة التحميل -->
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <h2 style="color: #e57283; font-weight: 900; font-size: 1.5rem; margin-top: 1rem;">يا هلا.. قاعدين نزهّب اللعبة</h2>
+        <p style="color: #a0aec0; font-weight: bold; margin-top: 0.5rem;">شويات وتبدأ الوناسة...</p>
+    </div>
+
+    <!-- حاوية تطبيق React -->
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- SVGs ---
+        const IconHome = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
+        const IconTrophy = ({size=48}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>;
+        const IconUser = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+        const IconUsers = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+        const IconArrows = () => <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>;
+
+        // --- قاعدة بيانات الكلمات (بالشرح الخليجي) ---
+        const wordsData = [
+            { difficulty: 'easy', type: 'antonym', word: "الكرم", answer: "البخل", wrongOptions: ["الخوف", "الجبن", "الضعف"], meaning: "إنك تعطي وتجود من قلبك وبدون منّة." },
+            { difficulty: 'easy', type: 'antonym', word: "النور", answer: "الظلام", wrongOptions: ["البرد", "الهدوء", "الخوف"], meaning: "الضوء اللي ينور لك دربك." },
+            { difficulty: 'easy', type: 'synonym', word: "السرور", answer: "الفرح", wrongOptions: ["التعب", "الغضب", "النوم"], meaning: "الوناسة وسعة الصدر." },
+            { difficulty: 'easy', type: 'antonym', word: "البداية", answer: "النهاية", wrongOptions: ["الوسط", "التوقف", "السفر"], meaning: "أول المشوار ونقطة الانطلاق." },
+            { difficulty: 'easy', type: 'antonym', word: "الصدق", answer: "الكذب", wrongOptions: ["الخوف", "التردد", "النفاق"], meaning: "إنك تقول الصدق وماتلف وتدور." },
+            { difficulty: 'medium', type: 'antonym', word: "الشجاعة", answer: "الجبن", wrongOptions: ["البخل", "الظلم", "الغرور"], meaning: "قوة القلب وما تخاف من الصعاب." },
+            { difficulty: 'medium', type: 'synonym', word: "الظفر", answer: "الفوز", wrongOptions: ["النجاة", "السفر", "القوة"], meaning: "إنك تجيب راسها وتفوز بعد تعب." },
+            { difficulty: 'medium', type: 'antonym', word: "التواضع", answer: "الغرور", wrongOptions: ["الذل", "الخجل", "الحكمة"], meaning: "إنك ما تشوف نفسك على الناس." },
+            { difficulty: 'hard', type: 'antonym', word: "إطناب", answer: "إيجاز", wrongOptions: ["فصاحة", "بلاغة", "سكوت"], meaning: "إنك تطول بالسالفة وتشرح واجد." },
+            { difficulty: 'hard', type: 'synonym', word: "المُهجة", answer: "الروح", wrongOptions: ["العقل", "القلب", "الجسد"], meaning: "روح الإنسان وأغلى ما يملك." }
+        ];
+
+        const teamThemes = [
+            { id: 'sky', class: 'clay-blue' },
+            { id: 'pink', class: 'clay-pink' },
+            { id: 'mint', class: 'clay-green' },
+            { id: 'lavender', class: 'clay-purple' }
+        ];
+
+        // --- نظام الصوت الآمن ---
+        let audioCtx = null;
+        const playSynthSound = (type) => {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                
+                if (type === 'correct') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.5, audioCtx.currentTime); 
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+                } else if (type === 'wrong' || type === 'timeout') {
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.5, audioCtx.currentTime); 
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+                }
+            } catch (e) {}
+        };
+
+        const speakText = (txt) => {
+            try {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const msg = new SpeechSynthesisUtterance(txt);
+                    msg.lang = 'ar-SA';
+                    window.speechSynthesis.speak(msg);
+                }
+            } catch (e) {}
+        };
+
+        function App() {
+            const [gameState, setGameState] = useState('menu');
+            const [difficulty, setDifficulty] = useState('easy');
+            const [teams, setTeams] = useState([]);
+            const [currTeamIdx, setCurrTeamIdx] = useState(0);
+            const [currQIdx, setCurrQIdx] = useState(0);
+            const [gameData, setGameData] = useState([]);
+            const [options, setOptions] = useState([]);
+            const [timeLeft, setTimeLeft] = useState(30);
+            const [lastStatus, setLastStatus] = useState(null);
+            const timerRef = useRef(null);
+
+            useEffect(() => {
+                return () => clearInterval(timerRef.current);
+            }, []);
+
+            const startTimer = () => {
+                clearInterval(timerRef.current);
+                timerRef.current = setInterval(() => {
+                    setTimeLeft(prev => {
+                        if (prev <= 1) { 
+                            clearInterval(timerRef.current); 
+                            setLastStatus('timeout'); 
+                            playSynthSound('timeout');
+                            setGameState('info'); 
+                            return 0; 
+                        }
+                        return prev - 1;
+                    });
+                }, 1000);
+            };
+
+            const beginGame = () => {
+                try {
+                    let filtered = wordsData.filter(w => w.difficulty === difficulty);
+                    if (filtered.length === 0) filtered = wordsData;
+                    
+                    let pool = [...filtered].sort(() => Math.random() - 0.5);
+                    const totalRequired = teams.length * 3;
+                    
+                    while (pool.length < totalRequired) {
+                        pool = [...pool, ...filtered].sort(() => Math.random() - 0.5);
+                    }
+                    
+                    const finalData = pool.slice(0, totalRequired);
+                    
+                    setGameData(finalData);
+                    setCurrQIdx(0); 
+                    setCurrTeamIdx(0);
+                    
+                    const currentQ = finalData[0];
+                    setOptions([...[currentQ.answer, ...currentQ.wrongOptions]].sort(() => Math.random() - 0.5));
+                    
+                    setTimeLeft(difficulty === 'hard' ? 15 : 30);
+                    setGameState('playing');
+                    
+                    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    startTimer();
+                    speakText(`وش ${currentQ.type === 'antonym' ? 'عكس' : 'معنى'} كلمة، ${currentQ.word}`);
+                } catch (err) {
+                    alert("صار فيه مشكلة بسيطة، حاول مرة ثانية.");
+                    setGameState('menu');
+                }
+            };
+
+            const handleAnswer = (opt) => {
+                clearInterval(timerRef.current);
+                const isCorrect = opt === gameData[currQIdx]?.answer;
+                
+                if (isCorrect) {
+                    playSynthSound('correct');
+                    const newTeams = [...teams];
+                    newTeams[currTeamIdx].score += 1;
+                    setTeams(newTeams);
+                } else {
+                    playSynthSound('wrong');
+                }
+                
+                setLastStatus(isCorrect ? 'correct' : 'wrong');
+                setGameState('info');
+            };
+
+            const nextTurn = () => {
+                const nextQ = currQIdx + 1;
+                if (nextQ >= gameData.length) { 
+                    setGameState('gameover'); 
+                    return; 
+                }
+                
+                const nextT = (currTeamIdx + 1) % teams.length;
+                setCurrQIdx(nextQ);
+                setCurrTeamIdx(nextT);
+                
+                const q = gameData[nextQ];
+                setOptions([...[q.answer, ...q.wrongOptions]].sort(() => Math.random() - 0.5));
+                setTimeLeft(difficulty === 'hard' ? 15 : 30);
+                
+                setGameState('playing');
+                startTimer();
+                speakText(`وش ${q.type === 'antonym' ? 'عكس' : 'معنى'} كلمة، ${q.word}`);
+            };
+
+            const setupMode = (mode) => {
+                setTeams([
+                    { name: mode === 'groups' ? 'فريق 1' : 'اللاعب 1', score: 0, theme: teamThemes[0] },
+                    { name: mode === 'groups' ? 'فريق 2' : 'اللاعب 2', score: 0, theme: teamThemes[1] }
+                ]);
+                setGameState('setup');
+            };
+
+            const currentQuestion = gameData[currQIdx];
+
+            return (
+                <div className="w-full min-h-screen flex flex-col items-center justify-center p-4">
+                    {/* زر الرجوع للرئيسية */}
+                    {gameState !== 'menu' && (
+                        <button onClick={() => { clearInterval(timerRef.current); setGameState('menu'); }} 
+                                className="fixed top-6 left-6 p-3 bg-white/80 text-[#e57283] rounded-full shadow-lg z-50">
+                            <IconHome />
+                        </button>
+                    )}
+
+                    {/* القائمة الرئيسية */}
+                    {gameState === 'menu' && (
+                        <div className="clay-main p-10 flex flex-col items-center justify-center anim-float aspect-[3/4] w-full max-w-sm">
+                            <IconTrophy size={100} />
+                            <h1 className="text-4xl font-black text-white mt-6 mb-10 text-3d text-center">تحدي الكلمات</h1>
+                            <div className="w-full flex flex-col gap-4">
+                                <button onClick={() => setupMode('individuals')} className="clay-btn-white py-4 font-black flex items-center justify-center gap-2"><IconUser /> تحدي أفراد</button>
+                                <button onClick={() => setupMode('groups')} className="clay-btn-white py-4 font-black flex items-center justify-center gap-2"><IconUsers /> تحدي شِلة</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* شاشة الإعدادات */}
+                    {gameState === 'setup' && (
+                        <div className="clay-panel p-6 w-full max-w-lg">
+                            <h2 className="text-2xl font-black text-[#e57283] text-center mb-6">زهّب لعبتك</h2>
+                            
+                            <div className="clay-input p-4 rounded-3xl mb-6">
+                                <p className="text-sm font-bold text-gray-500 mb-2 text-center">الصعوبة</p>
+                                <div className="flex gap-2">
+                                    {['easy', 'medium', 'hard'].map(l => (
+                                        <button key={l} onClick={() => setDifficulty(l)} 
+                                                className={`flex-1 py-2 rounded-full font-bold text-xs ${difficulty === l ? 'clay-main text-white' : 'bg-white text-gray-400'}`}>
+                                            {l === 'easy' ? 'سهالات' : l === 'medium' ? 'وسط' : 'كايد'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-4 mb-8">
+                                {teams.map((t, i) => (
+                                    <div key={i} className={`${t.theme.class} p-4 rounded-3xl text-white shadow-md`}>
+                                        <input className="bg-transparent text-center w-full font-black text-xl outline-none" 
+                                               value={t.name} 
+                                               onChange={(e) => {
+                                                   const nt = [...teams]; nt[i].name = e.target.value; setTeams(nt);
+                                               }} />
+                                    </div>
+                                ))}
+                            </div>
+                            <button onClick={beginGame} className="clay-btn-white w-full py-4 font-black text-xl">توكلنا على الله!</button>
+                        </div>
+                    )}
+
+                    {/* شاشة اللعب */}
+                    {gameState === 'playing' && currentQuestion && (
+                        <div className="w-full max-w-lg">
+                             <div className={`${currentQuestion.type === 'antonym' ? 'clay-purple' : 'clay-green'} p-8 pb-16 rounded-[3rem] text-center relative overflow-hidden shadow-2xl`}>
+                                
+                                {currentQuestion.type === 'antonym' && (
+                                    <div className="absolute inset-0 opacity-10 animate-arrows flex items-center gap-10">
+                                        <IconArrows /><IconArrows /><IconArrows /><IconArrows />
+                                    </div>
+                                )}
+                                
+                                <div className="flex justify-between items-center mb-8 relative z-10">
+                                    <span className="bg-white/30 px-4 py-1.5 rounded-full text-white font-bold text-sm shadow-sm">{teams[currTeamIdx]?.name}</span>
+                                    <span className="bg-white/30 px-4 py-1.5 rounded-full text-white font-black text-sm shadow-sm">{timeLeft} ثانية</span>
+                                </div>
+                                
+                                <h2 className="text-white/80 font-bold mb-2 relative z-10">وش {currentQuestion.type === 'antonym' ? 'عكس' : 'معنى'}:</h2>
+                                <h1 className="text-5xl font-black text-white mb-10 text-3d relative z-10 py-2">{currentQuestion.word}</h1>
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10">
+                                    {options.map((o, idx) => (
+                                        <button key={idx} onClick={() => handleAnswer(o)} className="clay-btn-white py-4 font-bold text-lg truncate px-2">{o}</button>
+                                    ))}
+                                </div>
+                             </div>
+                        </div>
+                    )}
+
+                    {/* شاشة النتيجة الفورية (صح/خطأ) */}
+                    {gameState === 'info' && currentQuestion && (
+                        <div className={`p-10 rounded-[3rem] text-center text-white w-full max-w-md ${lastStatus === 'correct' ? 'clay-green' : 'clay-main'}`}>
+                            <h2 className="text-4xl font-black mb-6">{lastStatus === 'correct' ? 'كفووو! إجابة صح' : 'أفااا! إجابتك غلط'}</h2>
+                            <div className="bg-white/20 p-6 rounded-3xl mb-8 shadow-inner">
+                                <p className="font-bold text-lg mb-2 text-white/80">الجواب الصح:</p>
+                                <p className="font-black text-2xl mb-4">{currentQuestion.answer}</p>
+                                <hr className="border-white/30 my-3" />
+                                <p className="text-sm opacity-90">{currentQuestion.meaning}</p>
+                            </div>
+                            <button onClick={nextTurn} className="clay-btn-white w-full py-4 font-black text-xl">هات اللي بعده</button>
+                        </div>
+                    )}
+
+                    {/* شاشة نهاية اللعبة */}
+                    {gameState === 'gameover' && (
+                        <div className="clay-purple p-8 rounded-[3rem] text-white text-center w-full max-w-md">
+                            <IconTrophy size={80} className="mx-auto mb-4 drop-shadow-md text-yellow-300" />
+                            <h2 className="text-3xl font-black my-6 text-3d">العلوم الزينة (النتائج)</h2>
+                            
+                            <div className="space-y-3 mb-6">
+                                {teams.sort((a,b) => b.score - a.score).map((t, i) => (
+                                    <div key={i} className={`flex justify-between p-4 rounded-2xl ${i===0 ? 'bg-white text-purple-600 shadow-lg scale-105' : 'bg-white/20 text-white'}`}>
+                                        <span className="font-bold text-lg">{t.name}</span>
+                                        <span className="font-black text-xl">{t.score} نقطة</span>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            <button onClick={() => window.location.reload()} className="clay-btn-white w-full py-4 font-black mt-4 text-xl">نلعب مرة ثانية؟</button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // إخفاء شاشة التحميل بمجرد ترجمة React بنجاح
+        document.getElementById('loading-screen').style.display = 'none';
+        
+        // تشغيل التطبيق
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
